@@ -2,894 +2,1562 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>מנהל כרטיסי האירועים שלי - 7.0</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts - Heebo & Assistant -->
-    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700;800&family=Heebo:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- JSZip for creating ZIP packages -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>הכרטיסים שלי - גרסה 8.0</title>
+    <!-- JSZip & FileSaver for local ZIP backup & export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: { 
-                        sans: ['Heebo', 'Assistant', 'sans-serif'] 
-                    }
-                }
-            }
-        }
-    </script>
+    <!-- FontAwesome for clean icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Heebo -->
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;800&display=swap" rel="stylesheet">
     <style>
-        body { 
-            font-family: 'Heebo', sans-serif; 
-            background: radial-gradient(circle at top right, #1e1b4b 0%, #0f172a 40%, #020617 100%);
-            color: #f8fafc; 
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #311042 100%);
+            --glass-bg: rgba(255, 255, 255, 0.08);
+            --glass-border: rgba(255, 255, 255, 0.16);
+            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --accent: #6366f1;
+            --accent-hover: #4f46e5;
+            --danger: #ef4444;
+            --success: #10b981;
+            --warning: #f59e0b;
+        }
+
+        body.light-mode {
+            --bg-gradient: linear-gradient(135deg, #e0e7ff 0%, #f3e8ff 50%, #fce7f3 100%);
+            --glass-bg: rgba(255, 255, 255, 0.72);
+            --glass-border: rgba(255, 255, 255, 0.9);
+            --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.12);
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Heebo', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background: var(--bg-gradient);
+            background-attachment: fixed;
+            color: var(--text-primary);
             min-height: 100vh;
+            padding-bottom: 90px;
+            transition: background 0.3s ease, color 0.3s ease;
         }
-        .glass-card { 
-            background: rgba(30, 41, 59, 0.75); 
-            backdrop-filter: blur(16px); 
+
+        /* Header */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.12); 
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            background: rgba(15, 23, 42, 0.65);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 14px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        .glass-nav { 
-            background: rgba(15, 23, 42, 0.92); 
-            backdrop-filter: blur(20px); 
-            -webkit-backdrop-filter: blur(20px);
-            border-top: 1px solid rgba(255, 255, 255, 0.1); 
+
+        body.light-mode header {
+            background: rgba(255, 255, 255, 0.75);
         }
-        .glow-effect {
-            box-shadow: 0 0 25px -5px rgba(99, 102, 241, 0.5);
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
-        .barcode { 
-            background: repeating-linear-gradient(90deg, #000, #000 2px, #fff 2px, #fff 4px); 
+
+        .logo-area i {
+            font-size: 1.5rem;
+            color: #818cf8;
         }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #0f172a; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #475569; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .logo-area h1 {
+            font-size: 1.3rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .version-badge {
+            font-size: 0.7rem;
+            background: var(--accent);
+            color: #fff;
+            padding: 2px 7px;
+            border-radius: 12px;
+            font-weight: 700;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .icon-btn {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            color: var(--text-primary);
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: transform 0.15s, background 0.2s;
+        }
+
+        .icon-btn:active {
+            transform: scale(0.92);
+        }
+
+        /* Container */
+        .container {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+
+        /* Search & Filter Bar */
+        .controls-bar {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+
+        .search-box {
+            position: relative;
+            width: 100%;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 12px 42px 12px 14px;
+            border-radius: 14px;
+            border: 1px solid var(--glass-border);
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            outline: none;
+        }
+
+        .search-box i {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+        }
+
+        .filter-pills {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+            scrollbar-width: none;
+        }
+        .filter-pills::-webkit-scrollbar { display: none; }
+
+        .pill {
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1px solid var(--glass-border);
+            background: var(--glass-bg);
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .pill.active {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+            font-weight: 600;
+        }
+
+        /* Event Cards */
+        .events-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .event-card {
+            position: relative;
+            border-radius: 20px;
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            box-shadow: var(--glass-shadow);
+            padding: 18px;
+            overflow: hidden;
+            transition: transform 0.2s ease;
+        }
+
+        .event-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 6px;
+            height: 100%;
+            background: var(--card-accent, #6366f1);
+        }
+
+        .event-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .event-title-wrap h2 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .event-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            align-items: center;
+        }
+
+        .category-tag {
+            background: rgba(255, 255, 255, 0.14);
+            padding: 3px 10px;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 0.78rem;
+        }
+
+        .countdown-badge {
+            padding: 4px 10px;
+            border-radius: 10px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            white-space: nowrap;
+        }
+
+        .countdown-badge.soon {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fbbf24;
+            border-color: rgba(245, 158, 11, 0.35);
+        }
+
+        .countdown-badge.past {
+            background: rgba(148, 163, 184, 0.2);
+            color: #94a3b8;
+            border-color: rgba(148, 163, 184, 0.3);
+        }
+
+        body.light-mode .countdown-badge { color: #059669; }
+        body.light-mode .countdown-badge.soon { color: #d97706; }
+        body.light-mode .countdown-badge.past { color: #64748b; }
+
+        .event-notes {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            background: rgba(0, 0, 0, 0.12);
+            padding: 8px 12px;
+            border-radius: 10px;
+        }
+        body.light-mode .event-notes { background: rgba(255, 255, 255, 0.5); }
+
+        /* Tickets List inside Event */
+        .tickets-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .ticket-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 10px 12px;
+            border-radius: 12px;
+            gap: 10px;
+        }
+        body.light-mode .ticket-item {
+            background: rgba(255, 255, 255, 0.65);
+            border-color: rgba(0, 0, 0, 0.08);
+        }
+
+        .ticket-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            overflow: hidden;
+        }
+
+        .ticket-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 9px;
+            background: rgba(99, 102, 241, 0.25);
+            color: #a5b4fc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        body.light-mode .ticket-icon { color: #4f46e5; }
+
+        .ticket-text {
+            overflow: hidden;
+        }
+
+        .ticket-holder {
+            font-weight: 600;
+            font-size: 0.92rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .ticket-filename {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .ticket-actions {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .btn-sm {
+            padding: 7px 11px;
+            border-radius: 9px;
+            border: none;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            color: #fff;
+            background: var(--accent);
+        }
+
+        .btn-sm.secondary {
+            background: rgba(255, 255, 255, 0.15);
+            color: var(--text-primary);
+        }
+        body.light-mode .btn-sm.secondary {
+            background: rgba(0, 0, 0, 0.08);
+        }
+
+        /* Card Footer Actions */
+        .card-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 14px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            flex-wrap: wrap;
+        }
+
+        .action-chip {
+            padding: 6px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--glass-border);
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-primary);
+            font-size: 0.8rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: background 0.2s;
+        }
+
+        .action-chip:hover {
+            background: rgba(255, 255, 255, 0.18);
+        }
+
+        .action-chip.delete {
+            color: #fca5a5;
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+        body.light-mode .action-chip.delete { color: #dc2626; }
+
+        /* Floating Add Button */
+        .fab {
+            position: fixed;
+            bottom: 22px;
+            left: 22px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: #fff;
+            border: none;
+            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.5);
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 200;
+            transition: transform 0.2s;
+        }
+
+        .fab:active {
+            transform: scale(0.9);
+        }
+
+        /* Modals */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.72);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 500;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .modal-overlay.open {
+            display: flex;
+        }
+
+        .modal-box {
+            background: #1e293b;
+            border: 1px solid var(--glass-border);
+            border-radius: 22px;
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 22px;
+            color: var(--text-primary);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        body.light-mode .modal-box {
+            background: #ffffff;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+
+        .modal-header h3 {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.4rem;
+            cursor: pointer;
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.88rem;
+            margin-bottom: 6px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 11px 13px;
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            background: rgba(255, 255, 255, 0.07);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            outline: none;
+        }
+
+        body.light-mode .form-control {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        /* Color Swatches */
+        .color-palette {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .color-swatch {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 3px solid transparent;
+            transition: transform 0.15s, border-color 0.15s;
+        }
+
+        .color-swatch.selected {
+            border-color: #fff;
+            transform: scale(1.15);
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+        body.light-mode .color-swatch.selected {
+            border-color: #0f172a;
+        }
+
+        /* Ticket Upload Rows in Form */
+        .ticket-upload-row {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px dashed var(--glass-border);
+            border-radius: 12px;
+            padding: 10px;
+            margin-bottom: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .ticket-upload-top {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 13px;
+            border-radius: 14px;
+            border: none;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+
+        /* Fullscreen Pinch-Zoom Viewer Modal */
+        .viewer-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.94);
+            z-index: 900;
+            display: none;
+            flex-direction: column;
+        }
+
+        .viewer-overlay.open {
+            display: flex;
+        }
+
+        .viewer-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 18px;
+            background: rgba(15, 23, 42, 0.85);
+            color: #fff;
+            z-index: 910;
+        }
+
+        .viewer-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 65%;
+        }
+
+        .viewer-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .viewer-stage {
+            flex: 1;
+            overflow: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: pinch-zoom pan-x pan-y;
+            position: relative;
+        }
+
+        .viewer-stage img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            transform-origin: center center;
+            transition: transform 0.1s ease-out;
+            touch-action: pinch-zoom pan-x pan-y;
+            user-select: none;
+        }
+
+        .viewer-stage iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: #fff;
+        }
+
+        .zoom-hint {
+            position: absolute;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.65);
+            color: #e2e8f0;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            pointer-events: none;
+        }
+
+        /* Backup & Data Menu */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+
+        .menu-card {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px;
+            border-radius: 14px;
+            border: 1px solid var(--glass-border);
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-primary);
+            cursor: pointer;
+            text-align: right;
+            transition: background 0.2s;
+        }
+
+        .menu-card:hover {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .menu-card i {
+            font-size: 1.4rem;
+            color: #818cf8;
+            width: 30px;
+            text-align: center;
+        }
+
+        .menu-card-text h4 {
+            font-size: 0.98rem;
+            margin-bottom: 2px;
+        }
+
+        .menu-card-text p {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state i {
+            font-size: 3.5rem;
+            margin-bottom: 14px;
+            opacity: 0.5;
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 95px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: #10b981;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s ease;
+            z-index: 1000;
+            white-space: nowrap;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
     </style>
 </head>
-<body class="min-h-screen pb-28 text-slate-100 selection:bg-indigo-500 selection:text-white">
+<body>
 
-    <!-- Header -->
-    <header class="sticky top-0 z-30 glass-nav border-b border-slate-800/80 px-4 py-3 shadow-2xl">
-        <div class="max-w-md mx-auto flex justify-between items-center">
-            <div class="flex items-center space-x-3 space-x-reverse">
-                <div class="bg-gradient-to-tr from-indigo-600 to-violet-500 p-2.5 rounded-2xl text-white shadow-lg shadow-indigo-500/30">
-                    <i class="fa-solid fa-ticket text-xl"></i>
-                </div>
-                <div>
-                    <h1 class="font-extrabold text-xl leading-tight bg-gradient-to-r from-white via-slate-200 to-indigo-200 bg-clip-text text-transparent">הכרטיסים שלי</h1>
-                    <span class="text-xs text-indigo-400 font-bold bg-indigo-950/80 px-2 py-0.5 rounded-md border border-indigo-800/60">7.0</span>
-                </div>
-            </div>
-            <div class="flex items-center space-x-2 space-x-reverse">
-                <button type="button" id="btnDownloadApp" title="שמור אפליקציה" class="bg-slate-800/90 hover:bg-slate-700 text-slate-300 w-9 h-9 rounded-xl text-sm transition border border-slate-700/80 flex items-center justify-center cursor-pointer">
-                    <i class="fa-solid fa-download text-indigo-400"></i>
-                </button>
-                <button type="button" id="btnDownloadZip" title="הורד ZIP" class="bg-slate-800/90 hover:bg-slate-700 text-slate-300 w-9 h-9 rounded-xl text-sm transition border border-slate-700/80 flex items-center justify-center cursor-pointer">
-                    <i class="fa-solid fa-file-zipper text-violet-400"></i>
-                </button>
-                <button type="button" id="btnOpenAddHeader" class="bg-gradient-to-r from-indigo-600 via-indigo-500 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-lg shadow-indigo-600/30 transition flex items-center gap-1.5 active:scale-95 cursor-pointer">
-                    <i class="fa-solid fa-plus text-sm"></i>
-                    <span>אירוע חדש</span>
-                </button>
-            </div>
+<header>
+    <div class="logo-area">
+        <i class="fa-solid fa-ticket"></i>
+        <h1>ארנק כרטיסים</h1>
+        <span class="version-badge">v8.0</span>
+    </div>
+    <div class="header-actions">
+        <button class="icon-btn" onclick="openDataModal()" title="גיבוי, שחזור וייבוא">
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+        </button>
+        <button class="icon-btn" onclick="toggleTheme()" title="מצב תאורה / חושך">
+            <i class="fa-solid fa-circle-half-stroke"></i>
+        </button>
+    </div>
+</header>
+
+<div class="container">
+    <div class="controls-bar">
+        <div class="search-box">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="searchInput" placeholder="חיפוש אירוע, משתתף או מיקום..." oninput="renderEvents()">
         </div>
-    </header>
+        <div class="filter-pills" id="categoryPills">
+            <div class="pill active" data-cat="הכל" onclick="setCategory('הכל', this)">הכל</div>
+            <div class="pill" data-cat="הופעה" onclick="setCategory('הופעה', this)">הופעה</div>
+            <div class="pill" data-cat="סרט / הצגה" onclick="setCategory('סרט / הצגה', this)">סרט / הצגה</div>
+            <div class="pill" data-cat="הרצאה" onclick="setCategory('הרצאה', this)">הרצאה</div>
+            <div class="pill" data-cat="ארוע פרטי" onclick="setCategory('ארוע פרטי', this)">ארוע פרטי</div>
+            <div class="pill" data-cat="טיסה / נסיעה" onclick="setCategory('טיסה / נסיעה', this)">טיסה / נסיעה</div>
+            <div class="pill" data-cat="אחר" onclick="setCategory('אחר', this)">אחר</div>
+        </div>
+    </div>
 
-    <!-- Main Container -->
-    <main class="max-w-md mx-auto p-4 space-y-4">
+    <div class="events-grid" id="eventsContainer"></div>
+</div>
 
-        <!-- Search & Filter Bar -->
-        <div class="space-y-3">
-            <div class="relative">
-                <i class="fa-solid fa-magnifying-glass absolute right-4 top-3.5 text-slate-400"></i>
-                <input type="text" id="searchInput" placeholder="חיפוש לפי שם, מיקום, קוד או מחזיק..." 
-                    class="w-full bg-slate-800/60 border border-slate-700/70 rounded-2xl pr-11 pl-4 py-3 text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition shadow-inner placeholder:text-slate-500">
-            </div>
+<!-- Floating Add Button -->
+<button class="fab" onclick="openEventModal()" title="הוסף אירוע חדש">
+    <i class="fa-solid fa-plus"></i>
+</button>
+
+<!-- Add / Edit Event Modal -->
+<div class="modal-overlay" id="eventModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3 id="eventModalTitle">אירוע חדש</h3>
+            <button class="close-modal" onclick="closeModal('eventModal')">&times;</button>
+        </div>
+        <form id="eventForm" onsubmit="saveEvent(event)">
+            <input type="hidden" id="editEventId">
             
-            <!-- Filter Pills -->
-            <div class="flex items-center space-x-1.5 space-x-reverse overflow-x-auto py-1 px-0.5 no-scrollbar">
-                <button type="button" data-filter="all" class="filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition bg-indigo-600 text-white shadow-md cursor-pointer">הכל</button>
-                <button type="button" data-filter="הרצאה" class="filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition bg-slate-800/80 text-slate-300 hover:bg-slate-700 border border-slate-700/60 cursor-pointer">🎓 הרצאה</button>
-                <button type="button" data-filter="אירוע פרטי" class="filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition bg-slate-800/80 text-slate-300 hover:bg-slate-700 border border-slate-700/60 cursor-pointer">🎉 אירוע פרטי</button>
-                <button type="button" data-filter="סרט" class="filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition bg-slate-800/80 text-slate-300 hover:bg-slate-700 border border-slate-700/60 cursor-pointer">🎬 סרט</button>
-                <button type="button" data-filter="הצגה" class="filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition bg-slate-800/80 text-slate-300 hover:bg-slate-700 border border-slate-700/60 cursor-pointer">🎭 הצגה</button>
-                <button type="button" data-filter="מופע" class="filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition bg-slate-800/80 text-slate-300 hover:bg-slate-700 border border-slate-700/60 cursor-pointer">🎸 מופע</button>
-                <button type="button" data-filter="מסיבה" class="filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition bg-slate-800/80 text-slate-300 hover:bg-slate-700 border border-slate-700/60 cursor-pointer">🪩 מסיבה</button>
+            <div class="form-group">
+                <label>שם האירוע *</label>
+                <input type="text" id="evTitle" class="form-control" required placeholder="לדוגמה: הופעה בקיסריה">
             </div>
 
-            <!-- View Switcher Tabs -->
-            <div class="grid grid-cols-2 bg-slate-900/70 p-1 rounded-2xl border border-slate-800 text-center">
-                <button type="button" id="btnListView" class="py-2 rounded-xl text-xs font-bold transition bg-indigo-600 text-white shadow cursor-pointer">
-                    <i class="fa-solid fa-list-ul ml-1"></i> תצוגת רשימה
+            <div class="form-row">
+                <div class="form-group">
+                    <label>תאריך *</label>
+                    <input type="date" id="evDate" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>שעה</label>
+                    <input type="time" id="evTime" class="form-control">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>קטגוריה</label>
+                    <select id="evCategory" class="form-control">
+                        <option value="הופעה">הופעה</option>
+                        <option value="סרט / הצגה">סרט / הצגה</option>
+                        <option value="הרצאה">הרצאה</option>
+                        <option value="ארוע פרטי">ארוע פרטי</option>
+                        <option value="טיסה / נסיעה">טיסה / נסיעה</option>
+                        <option value="אחר">אחר</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>מיקום / כתובת</label>
+                    <input type="text" id="evLocation" class="form-control" placeholder="היכל מנורה / זאפה">
+                </div>
+            </div>
+
+            <!-- Point 3: Custom Background Color Picker -->
+            <div class="form-group">
+                <label>צבע רקע לכרטיס האירוע</label>
+                <div class="color-palette" id="colorPalette">
+                    <div class="color-swatch selected" data-color="default" style="background: rgba(99, 102, 241, 0.35);" onclick="selectColor('default', this)"></div>
+                    <div class="color-swatch" data-color="#3b82f6" style="background: #3b82f6;" onclick="selectColor('#3b82f6', this)"></div>
+                    <div class="color-swatch" data-color="#8b5cf6" style="background: #8b5cf6;" onclick="selectColor('#8b5cf6', this)"></div>
+                    <div class="color-swatch" data-color="#ec4899" style="background: #ec4899;" onclick="selectColor('#ec4899', this)"></div>
+                    <div class="color-swatch" data-color="#10b981" style="background: #10b981;" onclick="selectColor('#10b981', this)"></div>
+                    <div class="color-swatch" data-color="#f59e0b" style="background: #f59e0b;" onclick="selectColor('#f59e0b', this)"></div>
+                    <div class="color-swatch" data-color="#ef4444" style="background: #ef4444;" onclick="selectColor('#ef4444', this)"></div>
+                    <div class="color-swatch" data-color="#06b6d4" style="background: #06b6d4;" onclick="selectColor('#06b6d4', this)"></div>
+                </div>
+                <input type="hidden" id="evColor" value="default">
+            </div>
+
+            <div class="form-group">
+                <label>הערות (שורה, כיסא, קוד כניסה)</label>
+                <input type="text" id="evNotes" class="form-control" placeholder="אולם, שורה 5, כיסאות 12-13">
+            </div>
+
+            <!-- Existing Tickets (when editing) -->
+            <div class="form-group" id="existingTicketsSection" style="display:none;">
+                <label>כרטיסים קיימים באירוע</label>
+                <div id="existingTicketsList"></div>
+            </div>
+
+            <!-- Add New Tickets -->
+            <div class="form-group">
+                <label>הוספת כרטיסים (תמונה או PDF)</label>
+                <div id="newTicketsContainer"></div>
+                <button type="button" class="btn-sm secondary" onclick="addTicketRow()" style="margin-top:6px;">
+                    <i class="fa-solid fa-plus"></i> הוסף שורת כרטיס
                 </button>
-                <button type="button" id="btnCalView" class="py-2 rounded-xl text-xs font-bold transition text-slate-400 hover:text-white cursor-pointer">
-                    <i class="fa-regular fa-calendar-days ml-1"></i> לוח שנה
-                </button>
             </div>
-        </div>
 
-        <!-- Google Drive Backup Banner -->
-        <div class="glass-card rounded-2xl p-3.5 flex items-center justify-between border border-indigo-500/20 bg-gradient-to-r from-indigo-950/40 to-slate-900/60">
-            <div class="flex items-center gap-3">
-                <div class="bg-indigo-600/20 p-2.5 rounded-xl text-indigo-400 border border-indigo-500/30">
-                    <i class="fa-brands fa-google-drive text-lg"></i>
+            <button type="submit" class="btn-primary">שמור אירוע</button>
+        </form>
+    </div>
+</div>
+
+<!-- Backup, Restore & Import Modal -->
+<div class="modal-overlay" id="dataModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3>גיבוי, שחזור ושיתוף</h3>
+            <button class="close-modal" onclick="closeModal('dataModal')">&times;</button>
+        </div>
+        <div class="menu-grid">
+            <!-- Point 5: Load event sent via email -->
+            <button class="menu-card" onclick="document.getElementById('importSingleInput').click()">
+                <i class="fa-solid fa-envelope-open-text"></i>
+                <div class="menu-card-text">
+                    <h4>טעינת אירוע שהתקבל במייל / מחבר</h4>
+                    <p>בחר קובץ אירוע (.json) שקיבלת כדי להוסיפו לרשימה שלך יחד עם הכרטיסים</p>
                 </div>
-                <div>
-                    <h4 class="text-xs font-bold text-slate-200">גיבוי לענן Google Drive</h4>
-                    <p class="text-[10px] text-slate-400">גיבוי מלא של האירועים והקבצים</p>
+            </button>
+            <input type="file" id="importSingleInput" accept=".json" style="display:none" onchange="importSingleEvent(event)">
+
+            <!-- Point 7: Local ZIP Backup -->
+            <button class="menu-card" onclick="exportFullZipBackup()">
+                <i class="fa-solid fa-file-zipper"></i>
+                <div class="menu-card-text">
+                    <h4>גיבוי מלא לקובץ ZIP במכשיר</h4>
+                    <p>אורז את כל האירועים והכרטיסים לקובץ ZIP מסודר לשמירה מקומית או בדרייב</p>
                 </div>
-            </div>
-            <button type="button" id="btnDriveBackup" class="bg-indigo-600/90 hover:bg-indigo-500 text-white text-xs px-3 py-2 rounded-xl font-bold transition shadow-md shadow-indigo-600/20 active:scale-95 cursor-pointer">
-                גיבוי
+            </button>
+
+            <!-- Point 6: Load Full Backup -->
+            <button class="menu-card" onclick="document.getElementById('restoreBackupInput').click()">
+                <i class="fa-solid fa-rotate-left"></i>
+                <div class="menu-card-text">
+                    <h4>שחזור מגיבוי מלא (ZIP או JSON)</h4>
+                    <p>טעינת כל האירועים והכרטיסים מקובץ גיבוי שנשמר בעבר</p>
+                </div>
+            </button>
+            <input type="file" id="restoreBackupInput" accept=".zip,.json" style="display:none" onchange="restoreFullBackup(event)">
+        </div>
+    </div>
+</div>
+
+<!-- Point 1: Pinch-Zoom Fullscreen Viewer -->
+<div class="viewer-overlay" id="viewerOverlay">
+    <div class="viewer-toolbar">
+        <div class="viewer-title" id="viewerTitle">תצוגת כרטיס</div>
+        <div class="viewer-actions">
+            <button class="btn-sm secondary" id="zoomResetBtn" onclick="resetZoom()" style="display:none;">
+                <i class="fa-solid fa-compress"></i> איפוס זום
+            </button>
+            <button class="btn-sm" onclick="downloadCurrentViewerFile()">
+                <i class="fa-solid fa-download"></i>
+            </button>
+            <button class="btn-sm secondary" onclick="closeViewer()">
+                <i class="fa-solid fa-xmark"></i> סגור
             </button>
         </div>
+    </div>
+    <div class="viewer-stage" id="viewerStage"></div>
+    <div class="zoom-hint" id="zoomHint">ניתן להגדיל ולהקטין עם 2 אצבעות על המסך</div>
+</div>
 
-        <!-- View 1: List View -->
-        <div id="listViewContainer" class="space-y-3"></div>
+<div class="toast" id="toast"></div>
 
-        <!-- View 2: Calendar View -->
-        <div id="calendarViewContainer" class="hidden space-y-4">
-            <div class="glass-card rounded-2xl p-4 shadow-xl">
-                <div class="flex justify-between items-center mb-4">
-                    <button type="button" id="btnPrevMonth" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer"><i class="fa-solid fa-chevron-right"></i></button>
-                    <h2 id="calendarMonthTitle" class="font-bold text-base text-indigo-300">חודש נוכחי</h2>
-                    <button type="button" id="btnNextMonth" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer"><i class="fa-solid fa-chevron-left"></i></button>
+<script>
+    const STORAGE_KEY = 'ticket_wallet_v8_data';
+    let events = [];
+    let currentCategory = 'הכל';
+    let currentViewerData = null;
+
+    // Initialize App
+    function init() {
+        const savedTheme = localStorage.getItem('ticket_wallet_theme');
+        if (savedTheme === 'light') {
+            document.body.classList.add('light-mode');
+        }
+        loadEvents();
+        renderEvents();
+    }
+
+    function toggleTheme() {
+        document.body.classList.toggle('light-mode');
+        const isLight = document.body.classList.contains('light-mode');
+        localStorage.setItem('ticket_wallet_theme', isLight ? 'light' : 'dark');
+    }
+
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 3200);
+    }
+
+    function loadEvents() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            events = raw ? JSON.parse(raw) : [];
+        } catch (e) {
+            console.error('Failed to load events', e);
+            events = [];
+        }
+    }
+
+    function persistEvents() {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
+        } catch (e) {
+            alert('שגיאה בשמירה: הזיכרון המקומי של הדפדפן מלא. מומלץ לבצע גיבוי ZIP ולמחוק אירועים ישנים.');
+        }
+    }
+
+    function setCategory(cat, el) {
+        currentCategory = cat;
+        document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+        el.classList.add('active');
+        renderEvents();
+    }
+
+    // Countdown Helper
+    function getCountdownBadge(dateStr, timeStr) {
+        if (!dateStr) return '';
+        const target = new Date(`${dateStr}T${timeStr || '23:59'}`);
+        const now = new Date();
+        const diffMs = target - now;
+        const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+        if (diffMs < 0 && diffDays < 0) {
+            return `<span class="countdown-badge past">האירוע עבר</span>`;
+        } else if (diffDays === 0) {
+            return `<span class="countdown-badge soon">היום!</span>`;
+        } else if (diffDays === 1) {
+            return `<span class="countdown-badge soon">מחר!</span>`;
+        } else if (diffDays <= 7) {
+            return `<span class="countdown-badge soon">בעוד ${diffDays} ימים</span>`;
+        } else {
+            return `<span class="countdown-badge">בעוד ${diffDays} ימים</span>`;
+        }
+    }
+
+    function hexToRgba(hex, alpha) {
+        if (!hex || hex === 'default') return 'var(--glass-bg)';
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    function renderEvents() {
+        const container = document.getElementById('eventsContainer');
+        const query = document.getElementById('searchInput').value.trim().toLowerCase();
+
+        const filtered = events
+            .filter(ev => currentCategory === 'הכל' || ev.category === currentCategory)
+            .filter(ev => {
+                if (!query) return true;
+                const inTitle = ev.title.toLowerCase().includes(query);
+                const inLoc = (ev.location || '').toLowerCase().includes(query);
+                const inNotes = (ev.notes || '').toLowerCase().includes(query);
+                const inTickets = (ev.tickets || []).some(t => (t.holder || '').toLowerCase().includes(query));
+                return inTitle || inLoc || inNotes || inTickets;
+            })
+            .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        if (filtered.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fa-solid fa-ticket-simple"></i>
+                    <h3>אין אירועים להצגה</h3>
+                    <p>לחץ על כפתור ה-+ למטה כדי להוסיף אירוע וכרטיסים חדשים</p>
                 </div>
-                <div class="grid grid-cols-7 gap-1 text-center text-xs font-semibold text-slate-400 mb-2">
-                    <div>א'</div><div>ב'</div><div>ג'</div><div>ד'</div><div>ה'</div><div>ו'</div><div>ש'</div>
-                </div>
-                <div id="calendarGrid" class="grid grid-cols-7 gap-1.5 text-center"></div>
-            </div>
-            <div id="selectedDayEvents" class="space-y-3"></div>
-        </div>
+            `;
+            return;
+        }
 
-    </main>
+        const isLight = document.body.classList.contains('light-mode');
+        container.innerHTML = filtered.map(ev => {
+            const bgTint = ev.color && ev.color !== 'default'
+                ? hexToRgba(ev.color, isLight ? 0.25 : 0.22)
+                : 'var(--glass-bg)';
+            const accentColor = ev.color && ev.color !== 'default' ? ev.color : '#6366f1';
 
-    <!-- Bottom Navigation / Quick Actions -->
-    <nav class="fixed bottom-0 left-0 right-0 glass-nav py-2.5 px-6 z-30 shadow-2xl border-t border-slate-800">
-        <div class="max-w-md mx-auto flex justify-around items-center text-slate-400">
-            <button type="button" id="btnNavHome" class="flex flex-col items-center hover:text-indigo-400 transition cursor-pointer">
-                <i class="fa-solid fa-house text-lg mb-0.5"></i>
-                <span class="text-[10px] font-medium">ראשי</span>
-            </button>
-            <button type="button" id="btnOpenAddCenter" class="flex flex-col items-center -mt-7 active:scale-90 transition cursor-pointer">
-                <div class="bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-600 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-xl shadow-indigo-600/50 text-2xl border-4 border-slate-950 glow-effect">
-                    <i class="fa-solid fa-plus"></i>
-                </div>
-                <span class="text-[10px] mt-1 text-indigo-400 font-bold">הוסף אירוע</span>
-            </button>
-            <button type="button" id="btnNavCalendar" class="flex flex-col items-center hover:text-indigo-400 transition cursor-pointer">
-                <i class="fa-solid fa-calendar-days text-lg mb-0.5"></i>
-                <span class="text-[10px] font-medium">לוח שנה</span>
-            </button>
-        </div>
-    </nav>
-
-    <!-- Add Event Modal -->
-    <div id="addModal" class="fixed inset-0 z-[100] bg-black/85 backdrop-blur-md hidden flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto">
-        <div class="glass-card w-full max-w-lg rounded-t-3xl sm:rounded-3xl p-6 space-y-4 max-h-[90vh] overflow-y-auto shadow-2xl border-t border-slate-700/80 my-auto">
-            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                <h3 class="font-extrabold text-lg text-indigo-300 flex items-center gap-2">
-                    <i class="fa-solid fa-circle-plus text-indigo-400"></i> הוספת כרטיס אירוע חדש
-                </h3>
-                <button type="button" id="btnCloseAddModal" class="text-slate-400 hover:text-white bg-slate-800/80 w-8 h-8 rounded-full flex items-center justify-center cursor-pointer"><i class="fa-solid fa-xmark text-base"></i></button>
-            </div>
-            <form id="eventForm" class="space-y-4">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-300 mb-1">שם האירוע</label>
-                    <input type="text" id="eventTitle" required placeholder="לדוגמה: הרצאה מעוררת השראה / יום הולדת 40" 
-                        class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-indigo-500">
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-300 mb-1">קטגוריה</label>
-                        <select id="eventCategory" class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-indigo-500">
-                            <option value="הרצאה">🎓 הרצאה</option>
-                            <option value="אירוע פרטי">🎉 אירוע פרטי</option>
-                            <option value="סרט">🎬 סרט</option>
-                            <option value="הצגה">🎭 הצגה</option>
-                            <option value="מופע">🎸 מופע / סטנדאפ</option>
-                            <option value="מסיבה">🪩 מסיבה</option>
-                            <option value="קונצרט">🎻 קונצרט</option>
-                            <option value="אחר">🎟️ אחר</option>
-                        </select>
+            const ticketsHtml = (ev.tickets || []).map((t, idx) => `
+                <div class="ticket-item">
+                    <div class="ticket-info">
+                        <div class="ticket-icon">
+                            <i class="fa-solid ${t.mimeType && t.mimeType.includes('pdf') ? 'fa-file-pdf' : 'fa-image'}"></i>
+                        </div>
+                        <div class="ticket-text">
+                            <div class="ticket-holder">${escapeHtml(t.holder || 'כרטיס #' + (idx + 1))}</div>
+                            <div class="ticket-filename">${escapeHtml(t.fileName)}</div>
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-300 mb-1">תאריך ושעה</label>
-                        <input type="datetime-local" id="eventDate" required 
-                            class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-indigo-500 text-slate-200">
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-300 mb-1">מיקום (אופציונלי)</label>
-                        <input type="text" id="eventLocation" placeholder="לדוגמה: מרכז ככנסים תל אביב" 
-                            class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-indigo-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-300 mb-1">מספר הזמנה / קוד כניסה</label>
-                        <input type="text" id="eventTicketNumber" placeholder="לדוגמה: #984521" 
-                            class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-indigo-500">
-                    </div>
-                </div>
-
-                <!-- Multiple Tickets Upload Section -->
-                <div class="border-t border-b border-slate-800/80 py-3.5 space-y-3">
-                    <div class="flex justify-between items-center">
-                        <label class="block text-xs font-bold text-indigo-300">קבצי כרטיסים ושמות מחזיקים</label>
-                        <button type="button" id="btnAddTicketRow" class="text-xs bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 px-3 py-1 rounded-xl border border-indigo-500/40 transition flex items-center gap-1 font-semibold cursor-pointer">
-                            <i class="fa-solid fa-plus text-xs"></i> הוסף כרטיס נוסף
+                    <div class="ticket-actions">
+                        <button class="btn-sm" onclick="openTicketViewer('${ev.id}', ${idx})">
+                            <i class="fa-solid fa-eye"></i> צפה
                         </button>
                     </div>
-                    <div id="ticketsContainer" class="space-y-3">
-                        <!-- Initial Row -->
-                        <div class="ticket-row bg-slate-950/70 p-3 rounded-2xl border border-slate-800 space-y-2">
-                            <div class="flex justify-between items-center text-[11px] text-slate-400 font-semibold">
-                                <span>כרטיס 1</span>
-                            </div>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                <input type="text" placeholder="שם מחזיק הכרטיס" class="ticket-holder bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
-                                <input type="file" accept="image/*,application/pdf" class="ticket-file bg-slate-900 border border-slate-700/80 rounded-xl px-2 py-1.5 text-xs text-slate-400 file:ml-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:bg-indigo-600 file:text-white file:font-semibold">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-slate-300 mb-1">הערות נוספות</label>
-                    <textarea id="eventNotes" rows="2" placeholder="שורה 4, מקומות 12-13..." 
-                        class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-indigo-500"></textarea>
-                </div>
-                <button type="submit" id="submitBtn" class="w-full bg-gradient-to-r from-indigo-600 via-indigo-500 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-indigo-600/30 transition text-sm mt-2 active:scale-98 cursor-pointer">
-                    שמור אירוע וכרטיסים במכשיר
-                </button>
-            </form>
-        </div>
-    </div>
-
-    <!-- View Ticket Modal -->
-    <div id="viewModal" class="fixed inset-0 z-[100] bg-black/85 backdrop-blur-md hidden flex items-center justify-center p-4 overflow-y-auto">
-        <div class="glass-card w-full max-w-md rounded-3xl p-6 space-y-4 shadow-2xl relative border border-slate-700/80 max-h-[92vh] overflow-y-auto my-auto">
-            <button type="button" id="btnCloseViewModal" class="absolute top-4 left-4 text-slate-400 hover:text-white bg-slate-800/80 w-8 h-8 rounded-full flex items-center justify-center z-10 cursor-pointer"><i class="fa-solid fa-xmark text-base"></i></button>
-            <div id="modalTicketContent" class="space-y-4 pt-2"></div>
-        </div>
-    </div>
-
-    <!-- JavaScript Logic -->
-    <script>
-        let events = JSON.parse(localStorage.getItem('user_tickets_v4')) || [
-            {
-                id: '1',
-                title: 'הרצאה: בינה מלאכותית ומיחשוב עתידי',
-                category: 'הרצאה',
-                date: '2026-06-15T20:00',
-                location: 'מרכז הכנסים תל אביב',
-                ticketNumber: 'LEC-904',
-                notes: 'אולם א\', שורה 5',
-                tickets: [
-                    { holder: 'ישראל ישראלי', fileData: null, fileName: null, fileType: null }
-                ]
-            },
-            {
-                id: '2',
-                title: 'אירוע פרטי: מסיבת יום הולדת 40',
-                category: 'אירוע פרטי',
-                date: '2026-06-25T19:30',
-                location: 'אולם אירועים השרון',
-                ticketNumber: 'PRIV-102',
-                notes: 'קוד כניסה בשער: 4421',
-                tickets: [
-                    { holder: 'דני כהן', fileData: null, fileName: null, fileType: null },
-                    { holder: 'מיכל כהן', fileData: null, fileName: null, fileType: null }
-                ]
-            }
-        ];
-
-        let currentFilter = 'all';
-        let currentView = 'list';
-        let calendarDate = new Date();
-
-        function saveToLocalStorage() {
-            try {
-                localStorage.setItem('user_tickets_v4', JSON.stringify(events));
-            } catch(e) {
-                alert('הזיכרון המקומי מלא. מומלץ להעלות קבצים קטנים יותר.');
-            }
-        }
-
-        function downloadAppFile() {
-            const htmlContent = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'my_tickets_app.html';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            alert('קובץ האפליקציה ירד בהצלחה למכשיר שלך!');
-        }
-
-        function addTicketInputRow() {
-            const container = document.getElementById('ticketsContainer');
-            if(!container) return;
-            const rowCount = container.children.length + 1;
-            const rowDiv = document.createElement('div');
-            rowDiv.className = 'ticket-row bg-slate-950/70 p-3 rounded-2xl border border-slate-800 space-y-2 relative';
-            rowDiv.innerHTML = `
-                <div class="flex justify-between items-center text-[11px] text-slate-400 font-semibold">
-                    <span>כרטיס ${rowCount}</span>
-                    <button type="button" class="btn-remove-row text-rose-400 hover:text-rose-300 text-xs cursor-pointer"><i class="fa-solid fa-trash-can"></i> הסר</button>
-                </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <input type="text" placeholder="שם מחזיק הכרטיס" class="ticket-holder bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
-                    <input type="file" accept="image/*,application/pdf" class="ticket-file bg-slate-900 border border-slate-700/80 rounded-xl px-2 py-1.5 text-xs text-slate-400 file:ml-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:bg-indigo-600 file:text-white file:font-semibold">
-                </div>
-            `;
-            container.appendChild(rowDiv);
-            
-            rowDiv.querySelector('.btn-remove-row').addEventListener('click', () => {
-                rowDiv.remove();
-            });
-        }
-
-        async function downloadAllFilesZip() {
-            if (typeof JSZip === 'undefined') {
-                alert('ספרית הזיפ טרם נטענה, נסה שנית בעוד רגע.');
-                return;
-            }
-            const zip = new JSZip();
-            const folder = zip.folder("event_tickets_files");
-            let count = 0;
-
-            events.forEach(ev => {
-                if (ev.tickets && ev.tickets.length > 0) {
-                    ev.tickets.forEach((t, idx) => {
-                        if (t.fileData) {
-                            const safeTitle = ev.title.replace(/[\\/:*?"<>|]/g, '_');
-                            const safeHolder = (t.holder || `כרטיס_${idx+1}`).replace(/[\\/:*?"<>|]/g, '_');
-                            const safeDate = ev.date ? ev.date.replace(/[\\/:*?"<>|]/g, '_').replace('T', '_') : 'no_date';
-                            const ext = t.fileType && t.fileType.includes('pdf') ? 'pdf' : (t.fileType && t.fileType.includes('png') ? 'png' : 'jpg');
-                            const fileName = `${safeTitle} - ${safeHolder} - ${safeDate}.${ext}`;
-                            const base64Data = t.fileData.split(',')[1];
-                            if (base64Data) {
-                                folder.file(fileName, base64Data, {base64: true});
-                                count++;
-                            }
-                        }
-                    });
-                }
-            });
-
-            if (count === 0) {
-                alert('אין קבצים מצורפים בכרטיסים כרגע.');
-                return;
-            }
-
-            folder.file("events_data.json", JSON.stringify(events, null, 2));
-
-            const content = await zip.generateAsync({type: "blob"});
-            const url = URL.createObjectURL(content);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `tickets_files_folder_${new Date().toISOString().slice(0,10)}.zip`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            alert(`נוצרה תיקיית כרטיסים (ZIP) עם ${count} קבצים!`);
-        }
-
-        function saveToGoogleDrive() {
-            downloadAllFilesZip();
-            alert('טיפ: קובץ ה-ZIP ירד למכשיר שלך. כעת יפתח Google Drive להעלאת הקבצים לתיקייה שתבחר.');
-            window.open('https://drive.google.com/', '_blank');
-        }
-
-        function switchView(view) {
-            currentView = view;
-            const listBtn = document.getElementById('btnListView');
-            const calBtn = document.getElementById('btnCalView');
-            const listContainer = document.getElementById('listViewContainer');
-            const calContainer = document.getElementById('calendarViewContainer');
-
-            if(view === 'list') {
-                if(listBtn) listBtn.className = "py-2 rounded-xl text-xs font-bold transition bg-indigo-600 text-white shadow cursor-pointer";
-                if(calBtn) calBtn.className = "py-2 rounded-xl text-xs font-bold transition text-slate-400 hover:text-white cursor-pointer";
-                if(listContainer) listContainer.classList.remove('hidden');
-                if(calContainer) calContainer.classList.add('hidden');
-            } else {
-                if(calBtn) calBtn.className = "py-2 rounded-xl text-xs font-bold transition bg-indigo-600 text-white shadow cursor-pointer";
-                if(listBtn) listBtn.className = "py-2 rounded-xl text-xs font-bold transition text-slate-400 hover:text-white cursor-pointer";
-                if(calContainer) calContainer.classList.remove('hidden');
-                if(listContainer) listContainer.classList.add('hidden');
-                renderCalendar();
-            }
-        }
-
-        function setFilter(cat) {
-            currentFilter = cat;
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                if (btn.getAttribute('data-filter') === cat) {
-                    btn.className = "filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition bg-indigo-600 text-white shadow-md cursor-pointer";
-                } else {
-                    btn.className = "filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition bg-slate-800/80 text-slate-300 hover:bg-slate-700 border border-slate-700/60 cursor-pointer";
-                }
-            });
-            renderApp();
-        }
-
-        function openAddModal() {
-            const modal = document.getElementById('addModal');
-            if(modal) {
-                modal.classList.remove('hidden');
-            }
-        }
-
-        function closeAddModal() {
-            const modal = document.getElementById('addModal');
-            if(modal) {
-                modal.classList.add('hidden');
-            }
-            const form = document.getElementById('eventForm');
-            if(form) form.reset();
-            
-            const container = document.getElementById('ticketsContainer');
-            if(container) {
-                container.innerHTML = `
-                    <div class="ticket-row bg-slate-950/70 p-3 rounded-2xl border border-slate-800 space-y-2">
-                        <div class="flex justify-between items-center text-[11px] text-slate-400 font-semibold">
-                            <span>כרטיס 1</span>
-                        </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            <input type="text" placeholder="שם מחזיק הכרטיס" class="ticket-holder bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
-                            <input type="file" accept="image/*,application/pdf" class="ticket-file bg-slate-900 border border-slate-700/80 rounded-xl px-2 py-1.5 text-xs text-slate-400 file:ml-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:bg-indigo-600 file:text-white file:font-semibold">
-                        </div>
-                    </div>`;
-            }
-            const submitBtn = document.getElementById('submitBtn');
-            if(submitBtn) {
-                submitBtn.innerText = 'שמור אירוע וכרטיסים במכשיר';
-                submitBtn.disabled = false;
-            }
-        }
-
-        function closeViewModal() {
-            const modal = document.getElementById('viewModal');
-            if(modal) {
-                modal.classList.add('hidden');
-            }
-        }
-
-        function readFileAsBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = (error) => reject(error);
-                reader.readAsDataURL(file);
-            });
-        }
-
-        async function saveEvent(e) {
-            e.preventDefault();
-            const submitBtn = document.getElementById('submitBtn');
-            if(submitBtn) {
-                submitBtn.innerText = 'שומר אירוע...';
-                submitBtn.disabled = true;
-            }
-
-            const titleVal = document.getElementById('eventTitle').value;
-            const dateVal = document.getElementById('eventDate').value;
-            const ticketRows = document.querySelectorAll('.ticket-row');
-            
-            const ticketsList = [];
-
-            for (let i = 0; i < ticketRows.length; i++) {
-                const row = ticketRows[i];
-                const holderVal = row.querySelector('.ticket-holder').value || `כרטיס ${i+1}`;
-                const fileInput = row.querySelector('.ticket-file');
-                const file = fileInput.files[0];
-
-                let fileData = null;
-                let fileType = null;
-                let fileName = null;
-
-                if (file) {
-                    try {
-                        fileData = await readFileAsBase64(file);
-                        fileType = file.type || (file.name.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg');
-                        const ext = fileType.includes('pdf') ? 'pdf' : (fileType.includes('png') ? 'png' : 'jpg');
-                        fileName = `${titleVal} - ${holderVal} - ${dateVal.replace('T', '_')}.${ext}`;
-                    } catch(err) {
-                        console.error('Error reading file', err);
-                    }
-                }
-
-                ticketsList.push({
-                    holder: holderVal,
-                    fileData: fileData,
-                    fileName: fileName,
-                    fileType: fileType
-                });
-            }
-
-            const newEvent = {
-                id: Date.now().toString(),
-                title: titleVal,
-                category: document.getElementById('eventCategory').value,
-                date: dateVal,
-                location: document.getElementById('eventLocation').value,
-                ticketNumber: document.getElementById('eventTicketNumber').value,
-                notes: document.getElementById('eventNotes').value,
-                tickets: ticketsList
-            };
-
-            events.push(newEvent);
-            saveToLocalStorage();
-            closeAddModal();
-            renderApp();
-        }
-
-        function deleteEvent(id) {
-            if(confirm('האם אתה בטוח שברצונך למחוק אירוע זה?')) {
-                events = events.filter(ev => ev.id !== id);
-                saveToLocalStorage();
-                closeViewModal();
-                renderApp();
-            }
-        }
-
-        function renderApp() {
-            if(currentView === 'list') {
-                renderList();
-            } else {
-                renderCalendar();
-            }
-        }
-
-        function renderList() {
-            const container = document.getElementById('listViewContainer');
-            if(!container) return;
-            const searchQuery = (document.getElementById('searchInput')?.value || '').toLowerCase();
-            
-            let filtered = events.filter(ev => {
-                const matchCat = currentFilter === 'all' || ev.category === currentFilter;
-                
-                const matchHolder = ev.tickets && ev.tickets.some(t => t.holder && t.holder.toLowerCase().includes(searchQuery));
-                const matchSearch = ev.title.toLowerCase().includes(searchQuery) || 
-                                    (ev.location && ev.location.toLowerCase().includes(searchQuery)) ||
-                                    (ev.ticketNumber && ev.ticketNumber.toLowerCase().includes(searchQuery)) ||
-                                    matchHolder;
-                return matchCat && matchSearch;
-            });
-
-            filtered.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-            if(filtered.length === 0) {
-                container.innerHTML = `
-                    <div class="glass-card rounded-2xl p-8 text-center space-y-3">
-                        <i class="fa-solid fa-ticket-simple text-4xl text-slate-500"></i>
-                        <p class="text-sm text-slate-400">אין כרטיסים להצגה</p>
-                    </div>`;
-                return;
-            }
-
-            container.innerHTML = filtered.map(ev => {
-                const eventDate = new Date(ev.date);
-                const dateStr = eventDate.toLocaleDateString('he-IL', { day: 'numeric', month: 'short', year: 'numeric' });
-                const timeStr = eventDate.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
-                
-                const diffTime = eventDate - new Date();
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                let badgeText = '';
-                let badgeClass = 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30';
-                if(diffDays === 0) { badgeText = 'היום!'; badgeClass = 'bg-rose-500/25 text-rose-300 border-rose-500/40 animate-pulse'; }
-                else if(diffDays === 1) { badgeText = 'מחר'; }
-                else if(diffDays > 1) { badgeText = `עוד ${diffDays} ימים`; }
-                else { badgeText = 'התקיים'; badgeClass = 'bg-slate-700/50 text-slate-400 border-slate-600'; }
-
-                const ticketsCount = ev.tickets ? ev.tickets.length : 0;
-                const holdersList = ev.tickets ? ev.tickets.map(t => t.holder).filter(Boolean).join(', ') : '';
-
-                return `
-                    <div data-id="${ev.id}" class="btn-view-ticket glass-card rounded-2xl p-4 transition hover:border-indigo-500/50 cursor-pointer shadow-lg space-y-2.5 relative overflow-hidden">
-                        <div class="flex justify-between items-start">
-                            <span class="px-2.5 py-1 rounded-lg text-xs font-semibold border ${badgeClass}">${badgeText}</span>
-                            <span class="text-xs bg-slate-800 text-slate-300 px-2.5 py-1 rounded-lg border border-slate-700/80 font-medium">${ev.category}</span>
-                        </div>
-                        <div>
-                            <h3 class="font-bold text-base text-slate-100 flex items-center justify-between gap-2">
-                                <span class="truncate">${ev.title}</span>
-                                <span class="text-[11px] font-semibold text-indigo-300 bg-indigo-950/80 px-2.5 py-0.5 rounded-full border border-indigo-800/60 shrink-0">${ticketsCount} כרטיסים</span>
-                            </h3>
-                            <div class="flex items-center gap-2 text-xs text-slate-400 mt-1">
-                                <span><i class="fa-regular fa-calendar ml-1 text-indigo-400"></i>${dateStr} בשעה ${timeStr}</span>
-                            </div>
-                            ${ev.location ? `<div class="flex items-center gap-2 text-xs text-slate-400 mt-0.5"><span><i class="fa-solid fa-location-dot ml-1 text-violet-400"></i>${ev.location}</span></div>` : ''}
-                            ${holdersList ? `<div class="text-xs text-indigo-200/80 mt-1 truncate"><i class="fa-solid fa-user-group ml-1 text-indigo-400"></i>מחזיקים: ${holdersList}</div>` : ''}
-                        </div>
-                        ${ev.ticketNumber ? `<div class="bg-slate-900/60 rounded-xl p-2 flex justify-between items-center text-xs border border-slate-800"><span class="text-slate-400">מספר הזמנה:</span><span class="font-mono font-bold text-indigo-300">${ev.ticketNumber}</span></div>` : ''}
-                    </div>
-                `;
-            }).join('');
-
-            document.querySelectorAll('.btn-view-ticket').forEach(card => {
-                card.addEventListener('click', () => {
-                    const id = card.getAttribute('data-id');
-                    viewTicket(id);
-                });
-            });
-        }
-
-        function openFileInBrowser(base64Data, mimeType) {
-            try {
-                const byteCharacters = atob(base64Data.split(',')[1]);
-                const byteNumbers = new Array(byteCharacters.length);
-                for (let i = 0; i < byteCharacters.length; i++) {
-                    byteNumbers[i] = byteCharacters.charCodeAt(i);
-                }
-                const byteArray = new Uint8Array(byteNumbers);
-                const blob = new Blob([byteArray], { type: mimeType || 'application/pdf' });
-                const blobUrl = URL.createObjectURL(blob);
-                window.open(blobUrl, '_blank');
-            } catch(e) {
-                alert('חלון דפדפן חסם את פתיחת הקובץ. ניתן ללחוץ על כפתור ההורדה לקובץ.');
-            }
-        }
-
-        function viewTicket(id) {
-            const ev = events.find(e => e.id === id);
-            if(!ev) return;
-
-            const eventDate = new Date(ev.date);
-            const dateStr = eventDate.toLocaleDateString('he-IL', { day: 'numeric', month: 'long', year: 'numeric' });
-            const timeStr = eventDate.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
-
-            const gCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(ev.title)}&dates=${eventDate.toISOString().replace(/-|:|\.\d\d\d/g,"")}/${new Date(eventDate.getTime() + 2*3600*1000).toISOString().replace(/-|:|\.\d\d\d/g,"")}&details=${encodeURIComponent('מספר הזמנה: ' + (ev.ticketNumber || '') + '\nהערות: ' + (ev.notes || ''))}&location=${encodeURIComponent(ev.location || '')}`;
-
-            const icsContent = "BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nSUMMARY:" + ev.title + "\nDESCRIPTION:מספר הזמנה: " + (ev.ticketNumber || '') + "\nLOCATION:" + (ev.location || '') + "\nDTSTART:" + eventDate.toISOString().replace(/-|:|\.\d\d\d/g,"") + "\nEND:VEVENT\nEND:VCALENDAR";
-            const icsBlob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-            const icsUrl = URL.createObjectURL(icsBlob);
-
-            let ticketsHtml = '';
-            if (ev.tickets && ev.tickets.length > 0) {
-                ticketsHtml = `
-                    <div class="mt-3 space-y-3">
-                        <span class="text-xs font-bold text-indigo-300 block border-b border-slate-800 pb-1">כרטיסים משוייכים (${ev.tickets.length}):</span>
-                        ${ev.tickets.map((t, idx) => {
-                            const downloadName = t.fileName || `${ev.title}_${t.holder}_${ev.date}.pdf`;
-                            let fileHtml = '';
-
-                            if (t.fileData) {
-                                const isPdf = t.fileType && t.fileType.includes('pdf');
-                                if (!isPdf) {
-                                    fileHtml = `
-                                        <div class="space-y-1 mt-1">
-                                            <a href="${t.fileData}" download="${downloadName}" class="text-[11px] text-indigo-400 hover:underline flex items-center gap-1 font-semibold">
-                                                <i class="fa-solid fa-download"></i> הורד תמונה (${t.holder})
-                                            </a>
-                                            <img src="${t.fileData}" data-b64="${t.fileData}" data-type="${t.fileType}" class="btn-open-media w-full max-h-48 object-contain rounded-xl border border-slate-700 bg-slate-950 cursor-pointer hover:opacity-90 transition shadow-inner"/>
-                                        </div>`;
-                                } else {
-                                    fileHtml = `
-                                        <div class="space-y-2 mt-1.5 p-2.5 bg-slate-950/80 rounded-xl border border-slate-700/80">
-                                            <div class="flex items-center justify-between">
-                                                <div class="flex items-center gap-2">
-                                                    <i class="fa-solid fa-file-pdf text-rose-500 text-xl"></i>
-                                                    <div>
-                                                        <span class="text-xs font-bold text-slate-200 block">${t.holder}</span>
-                                                        <span class="text-[10px] text-slate-400 truncate max-w-[150px] block">${downloadName}</span>
-                                                    </div>
-                                                </div>
-                                                <div class="flex items-center gap-1">
-                                                    <button type="button" data-b64="${t.fileData}" data-type="${t.fileType}" class="btn-open-media bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-2.5 py-1 rounded-lg flex items-center gap-1 font-semibold shadow cursor-pointer">
-                                                        <i class="fa-solid fa-arrow-up-right-from-square"></i> הצג
-                                                    </button>
-                                                    <a href="${t.fileData}" download="${downloadName}" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-2 py-1 rounded-lg border border-slate-700">
-                                                        <i class="fa-solid fa-download"></i>
-                                                    </a>
-                                                </div>
-                                            </div>
-                                        </div>`;
-                                }
-                            } else {
-                                fileHtml = `<span class="text-[11px] text-slate-500 block italic">לא צורף קובץ כרטיס</span>`;
-                            }
-
-                            return `
-                                <div class="bg-slate-900/90 rounded-2xl p-3 border border-slate-800 space-y-1">
-                                    <div class="flex justify-between items-center">
-                                        <span class="text-xs font-bold text-slate-200"><i class="fa-solid fa-user text-indigo-400 ml-1"></i>${t.holder || `כרטיס ${idx+1}`}</span>
-                                        <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-lg font-mono">כרטיס #${idx+1}</span>
-                                    </div>
-                                    ${fileHtml}
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>`;
-            }
-
-            document.getElementById('modalTicketContent').innerHTML = `
-                <div class="text-center space-y-1 pb-2 border-b border-slate-800">
-                    <span class="text-xs bg-indigo-500/20 text-indigo-300 px-2.5 py-1 rounded-lg border border-indigo-500/30 font-semibold">${ev.category}</span>
-                    <h2 class="text-xl font-extrabold text-white mt-1">${ev.title}</h2>
-                    <p class="text-xs text-slate-400"><i class="fa-regular fa-calendar ml-1 text-indigo-400"></i>${dateStr} | ${timeStr}</p>
-                    ${ev.location ? `<p class="text-xs text-slate-400"><i class="fa-solid fa-location-dot ml-1 text-violet-400"></i>${ev.location}</p>` : ''}
-                </div>
-
-                ${ev.ticketNumber ? `
-                    <div class="bg-slate-900/80 rounded-2xl p-4 text-center border border-slate-800 space-y-2">
-                        <span class="text-xs text-slate-400 block">מספר הזמנה / ברקוד</span>
-                        <div class="font-mono text-lg font-bold text-indigo-300 tracking-wider">${ev.ticketNumber}</div>
-                        <div class="h-12 w-3/4 mx-auto barcode rounded-lg opacity-80"></div>
-                    </div>
-                ` : ''}
-
-                ${ev.notes ? `<div class="bg-slate-900/50 rounded-xl p-3 text-xs text-slate-300 border border-slate-800"><span class="font-bold text-slate-400 block mb-1">הערות:</span>${ev.notes}</div>` : ''}
-
-                ${ticketsHtml}
-
-                <div class="grid grid-cols-2 gap-2 pt-2">
-                    <a href="${gCalUrl}" target="_blank" class="bg-indigo-600 hover:bg-indigo-500 text-white text-center py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/30">
-                        <i class="fa-brands fa-google"></i> הוסף ליומן Google
-                    </a>
-                    <a href="${icsUrl}" download="reminder.ics" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-center py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border border-slate-700">
-                        <i class="fa-solid fa-bell"></i> הורד תזכורת (ICS)
-                    </a>
-                </div>
-
-                <div class="grid grid-cols-2 gap-2">
-                    <button type="button" id="btnShareModal" class="bg-slate-800 hover:bg-slate-700 text-slate-200 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border border-slate-700 cursor-pointer">
-                        <i class="fa-solid fa-share-nodes text-indigo-400"></i> שתף אירוע
-                    </button>
-                    <button type="button" id="btnDeleteModal" class="bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border border-rose-500/30 cursor-pointer">
-                        <i class="fa-solid fa-trash"></i> מחוק אירוע
-                    </button>
-                </div>
-            `;
-
-            document.querySelectorAll('.btn-open-media').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const b64 = btn.getAttribute('data-b64');
-                    const mime = btn.getAttribute('data-type');
-                    openFileInBrowser(b64, mime);
-                });
-            });
-
-            document.getElementById('btnShareModal')?.addEventListener('click', () => shareTicket(ev.id));
-            document.getElementById('btnDeleteModal')?.addEventListener('click', () => deleteEvent(ev.id));
-
-            const viewModal = document.getElementById('viewModal');
-            if(viewModal) {
-                viewModal.classList.remove('hidden');
-            }
-        }
-
-        function shareTicket(id) {
-            const ev = events.find(e => e.id === id);
-            if(!ev) return;
-            const shareText = `🎟️ כרטיס לאירוע: ${ev.title} - ${ev.date}`;
-            if (navigator.share) {
-                navigator.share({ title: ev.title, text: shareText }).catch(() => {});
-            } else {
-                navigator.clipboard.writeText(shareText);
-                alert('פרטי הכרטיס הועתקו ללוח!');
-            }
-        }
-
-        function changeMonth(dir) {
-            calendarDate.setMonth(calendarDate.getMonth() + dir);
-            renderCalendar();
-        }
-
-        function renderCalendar() {
-            const year = calendarDate.getFullYear();
-            const month = calendarDate.getMonth();
-            const monthNames = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"];
-            const titleElem = document.getElementById('calendarMonthTitle');
-            if(titleElem) titleElem.innerText = monthNames[month] + " " + year;
-
-            const firstDayIndex = new Date(year, month, 1).getDay();
-            const totalDays = new Date(year, month + 1, 0).getDate();
-            const grid = document.getElementById('calendarGrid');
-            if(!grid) return;
-            grid.innerHTML = '';
-
-            for(let i = 0; i < firstDayIndex; i++) {
-                grid.innerHTML += `<div></div>`;
-            }
-
-            for(let day = 1; day <= totalDays; day++) {
-                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                const hasEvent = events.some(ev => ev.date.startsWith(dateStr));
-                
-                grid.innerHTML += `
-                    <div data-date="${dateStr}" class="btn-cal-day aspect-square rounded-xl flex flex-col items-center justify-center cursor-pointer transition ${hasEvent ? 'bg-indigo-600/40 border border-indigo-500 font-bold text-indigo-200' : 'bg-slate-800/40 hover:bg-slate-800 text-slate-300'} text-xs">
-                        <span>${day}</span>
-                        ${hasEvent ? '<div class="w-1.5 h-1.5 bg-indigo-400 rounded-full mt-1 glow-effect"></div>' : ''}
-                    </div>
-                `;
-            }
-
-            document.querySelectorAll('.btn-cal-day').forEach(el => {
-                el.addEventListener('click', () => {
-                    selectCalendarDate(el.getAttribute('data-date'));
-                });
-            });
-        }
-
-        function selectCalendarDate(dateStr) {
-            const container = document.getElementById('selectedDayEvents');
-            if(!container) return;
-            const dayEvents = events.filter(ev => ev.date.startsWith(dateStr));
-
-            if(dayEvents.length === 0) {
-                container.innerHTML = `<div class="glass-card rounded-2xl p-4 text-center text-xs text-slate-400">אין אירועים בתאריך ${dateStr}</div>`;
-                return;
-            }
-
-            container.innerHTML = `<h4 class="text-xs font-bold text-indigo-300 mb-2">אירועים בתאריך ${dateStr}:</h4>` + dayEvents.map(ev => `
-                <div data-id="${ev.id}" class="btn-view-ticket glass-card rounded-xl p-3 cursor-pointer hover:border-indigo-500/50 flex justify-between items-center">
-                    <div>
-                        <h5 class="font-bold text-sm text-white">${ev.title}</h5>
-                        <p class="text-xs text-slate-400">${ev.location || ev.category}</p>
-                    </div>
-                    <span class="text-xs bg-indigo-600 text-white px-2.5 py-1 rounded-lg font-semibold">צפה</span>
                 </div>
             `).join('');
 
-            document.querySelectorAll('.btn-view-ticket').forEach(card => {
-                card.addEventListener('click', () => {
-                    const id = card.getAttribute('data-id');
-                    viewTicket(id);
+            return `
+                <div class="event-card" style="background: ${bgTint}; --card-accent: ${accentColor};">
+                    <div class="event-header">
+                        <div class="event-title-wrap">
+                            <h2>${escapeHtml(ev.title)}</h2>
+                            <div class="event-meta">
+                                <span class="category-tag">${escapeHtml(ev.category)}</span>
+                                <span><i class="fa-regular fa-calendar"></i> ${formatDate(ev.date)} ${ev.time ? '• ' + ev.time : ''}</span>
+                                ${ev.location ? `<span><i class="fa-solid fa-location-dot"></i> ${escapeHtml(ev.location)}</span>` : ''}
+                            </div>
+                        </div>
+                        ${getCountdownBadge(ev.date, ev.time)}
+                    </div>
+
+                    ${ev.notes ? `<div class="event-notes"><i class="fa-solid fa-circle-info"></i> ${escapeHtml(ev.notes)}</div>` : ''}
+
+                    <div class="tickets-list">
+                        ${ticketsHtml || '<div style="font-size:0.82rem; opacity:0.7;">לא צורפו קבצי כרטיסים</div>'}
+                    </div>
+
+                    <div class="card-actions">
+                        ${ev.location ? `
+                            <button class="action-chip" onclick="openWaze('${escapeHtml(ev.location)}')">
+                                <i class="fa-brands fa-waze"></i> ניווט
+                            </button>
+                        ` : ''}
+                        <button class="action-chip" onclick="shareEventToFriend('${ev.id}')">
+                            <i class="fa-solid fa-envelope"></i> שלח לחבר
+                        </button>
+                        <button class="action-chip" onclick="openEditEventModal('${ev.id}')">
+                            <i class="fa-solid fa-pen"></i> ערוך
+                        </button>
+                        <button class="action-chip delete" onclick="deleteEvent('${ev.id}')">
+                            <i class="fa-solid fa-trash"></i> מחק
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function formatDate(dateStr) {
+        if (!dateStr) return '';
+        const [y, m, d] = dateStr.split('-');
+        return `${d}/${m}/${y}`;
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>"']/g, m => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[m]));
+    }
+
+    function openWaze(loc) {
+        window.open(`https://waze.com/ul?q=${encodeURIComponent(loc)}&navigate=yes`, '_blank');
+    }
+
+    // Color Selection
+    function selectColor(color, el) {
+        document.getElementById('evColor').value = color;
+        document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+        if (el) el.classList.add('selected');
+    }
+
+    // Modal Open / Close
+    function openEventModal() {
+        document.getElementById('eventModalTitle').textContent = 'אירוע חדש';
+        document.getElementById('editEventId').value = '';
+        document.getElementById('eventForm').reset();
+        selectColor('default', document.querySelector('.color-swatch[data-color="default"]'));
+        document.getElementById('existingTicketsSection').style.display = 'none';
+        document.getElementById('existingTicketsList').innerHTML = '';
+        document.getElementById('newTicketsContainer').innerHTML = '';
+        addTicketRow();
+        document.getElementById('eventModal').classList.add('open');
+    }
+
+    // Point 2: Edit Existing Event
+    let tempExistingTickets = [];
+    function openEditEventModal(id) {
+        const ev = events.find(e => e.id === id);
+        if (!ev) return;
+
+        document.getElementById('eventModalTitle').textContent = 'עריכת אירוע';
+        document.getElementById('editEventId').value = ev.id;
+        document.getElementById('evTitle').value = ev.title;
+        document.getElementById('evDate').value = ev.date;
+        document.getElementById('evTime').value = ev.time || '';
+        document.getElementById('evCategory').value = ev.category || 'הופעה';
+        document.getElementById('evLocation').value = ev.location || '';
+        document.getElementById('evNotes').value = ev.notes || '';
+
+        const colorVal = ev.color || 'default';
+        const swatch = document.querySelector(`.color-swatch[data-color="${colorVal}"]`) || document.querySelector('.color-swatch[data-color="default"]');
+        selectColor(colorVal, swatch);
+
+        tempExistingTickets = JSON.parse(JSON.stringify(ev.tickets || []));
+        renderExistingTicketsInForm();
+
+        document.getElementById('newTicketsContainer').innerHTML = '';
+        document.getElementById('eventModal').classList.add('open');
+    }
+
+    function renderExistingTicketsInForm() {
+        const sec = document.getElementById('existingTicketsSection');
+        const list = document.getElementById('existingTicketsList');
+        if (tempExistingTickets.length === 0) {
+            sec.style.display = 'none';
+            return;
+        }
+        sec.style.display = 'block';
+        list.innerHTML = tempExistingTickets.map((t, i) => `
+            <div class="ticket-upload-row">
+                <div class="ticket-upload-top">
+                    <input type="text" class="form-control" value="${escapeHtml(t.holder)}" 
+                        onchange="tempExistingTickets[${i}].holder = this.value" placeholder="שם בעל הכרטיס">
+                    <button type="button" class="btn-sm" style="background:var(--danger);" onclick="removeExistingTicket(${i})">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+                <div style="font-size:0.75rem; color:var(--text-secondary);">קובץ שמור: ${escapeHtml(t.fileName)}</div>
+            </div>
+        `).join('');
+    }
+
+    function removeExistingTicket(idx) {
+        tempExistingTickets.splice(idx, 1);
+        renderExistingTicketsInForm();
+    }
+
+    function addTicketRow() {
+        const container = document.getElementById('newTicketsContainer');
+        const row = document.createElement('div');
+        row.className = 'ticket-upload-row';
+        row.innerHTML = `
+            <div class="ticket-upload-top">
+                <input type="text" class="form-control ticket-holder-input" placeholder="שם משתתף (למשל: דני)">
+                <button type="button" class="btn-sm" style="background:var(--danger);" onclick="this.closest('.ticket-upload-row').remove()">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <input type="file" class="form-control ticket-file-input" accept="image/*,application/pdf">
+        `;
+        container.appendChild(row);
+    }
+
+    function readFileAsBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+
+    async function saveEvent(e) {
+        e.preventDefault();
+        const editId = document.getElementById('editEventId').value;
+        const title = document.getElementById('evTitle').value.trim();
+        const date = document.getElementById('evDate').value;
+        const time = document.getElementById('evTime').value;
+        const category = document.getElementById('evCategory').value;
+        const location = document.getElementById('evLocation').value.trim();
+        const notes = document.getElementById('evNotes').value.trim();
+        const color = document.getElementById('evColor').value;
+
+        const rows = document.querySelectorAll('#newTicketsContainer .ticket-upload-row');
+        const newlyAddedTickets = [];
+
+        for (const row of rows) {
+            const holder = row.querySelector('.ticket-holder-input').value.trim();
+            const fileInput = row.querySelector('.ticket-file-input');
+            if (fileInput.files && fileInput.files[0]) {
+                const file = fileInput.files[0];
+                const base64 = await readFileAsBase64(file);
+                const ext = file.name.split('.').pop();
+                const cleanTitle = title.replace(/[^a-zA-Z0-9א-ת _-]/g, '');
+                const cleanHolder = holder ? '_' + holder.replace(/[^a-zA-Z0-9א-ת _-]/g, '') : '';
+                const formattedName = `${cleanTitle}_${date}${cleanHolder}.${ext}`;
+
+                newlyAddedTickets.push({
+                    holder: holder || 'כרטיס כניסה',
+                    fileName: formattedName,
+                    mimeType: file.type,
+                    dataUrl: base64
                 });
-            });
+            }
         }
 
-        // Initialize event listeners safely when DOM is loaded
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('btnDownloadApp')?.addEventListener('click', downloadAppFile);
-            document.getElementById('btnDownloadZip')?.addEventListener('click', downloadAllFilesZip);
-            document.getElementById('btnDriveBackup')?.addEventListener('click', saveToGoogleDrive);
-
-            document.getElementById('btnOpenAddHeader')?.addEventListener('click', openAddModal);
-            document.getElementById('btnOpenAddCenter')?.addEventListener('click', openAddModal);
-            document.getElementById('btnCloseAddModal')?.addEventListener('click', closeAddModal);
-            document.getElementById('btnCloseViewModal')?.addEventListener('click', closeViewModal);
-
-            document.getElementById('btnAddTicketRow')?.addEventListener('click', addTicketInputRow);
-
-            document.getElementById('btnListView')?.addEventListener('click', () => switchView('list'));
-            document.getElementById('btnCalView')?.addEventListener('click', () => switchView('calendar'));
-            document.getElementById('btnNavHome')?.addEventListener('click', () => { switchView('list'); setFilter('all'); });
-            document.getElementById('btnNavCalendar')?.addEventListener('click', () => switchView('calendar'));
-
-            document.getElementById('btnPrevMonth')?.addEventListener('click', () => changeMonth(-1));
-            document.getElementById('btnNextMonth')?.addEventListener('click', () => changeMonth(1));
-
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const cat = btn.getAttribute('data-filter');
-                    setFilter(cat);
-                });
+        if (editId) {
+            const idx = events.findIndex(ev => ev.id === editId);
+            if (idx !== -1) {
+                events[idx] = {
+                    ...events[idx],
+                    title, date, time, category, location, notes, color,
+                    tickets: [...tempExistingTickets, ...newlyAddedTickets]
+                };
+            }
+            showToast('האירוע עודכן בהצלחה!');
+        } else {
+            events.push({
+                id: 'ev_' + Date.now(),
+                title, date, time, category, location, notes, color,
+                tickets: newlyAddedTickets
             });
+            showToast('האירוע נוסף בהצלחה!');
+        }
 
-            document.getElementById('eventForm')?.addEventListener('submit', saveEvent);
+        persistEvents();
+        closeModal('eventModal');
+        renderEvents();
+    }
 
-            renderApp();
+    function deleteEvent(id) {
+        if (!confirm('האם למחוק אירוע זה ואת כל הכרטיסים שבו?')) return;
+        events = events.filter(e => e.id !== id);
+        persistEvents();
+        renderEvents();
+        showToast('האירוע נמחק');
+    }
+
+    function closeModal(id) {
+        document.getElementById(id).classList.remove('open');
+    }
+
+    function openDataModal() {
+        document.getElementById('dataModal').classList.add('open');
+    }
+
+    // Point 1: Pinch-Zoom Image & PDF Viewer
+    let currentScale = 1;
+    let initialPinchDist = 0;
+    let startScale = 1;
+
+    function openTicketViewer(eventId, ticketIdx) {
+        const ev = events.find(e => e.id === eventId);
+        if (!ev || !ev.tickets[ticketIdx]) return;
+        const ticket = ev.tickets[ticketIdx];
+        currentViewerData = ticket;
+
+        document.getElementById('viewerTitle').textContent = `${ticket.holder} - ${ev.title}`;
+        const stage = document.getElementById('viewerStage');
+        const zoomHint = document.getElementById('zoomHint');
+        const zoomResetBtn = document.getElementById('zoomResetBtn');
+        stage.innerHTML = '';
+        currentScale = 1;
+
+        if (ticket.mimeType && ticket.mimeType.includes('pdf')) {
+            // Convert base64 to Blob URL for reliable mobile PDF rendering
+            const byteChars = atob(ticket.dataUrl.split(',')[1]);
+            const byteNumbers = new Array(byteChars.length);
+            for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+            const blob = new Blob([new Uint8Array(byteNumbers)], { type: 'application/pdf' });
+            const blobUrl = URL.createObjectURL(blob);
+
+            stage.innerHTML = `<iframe src="${blobUrl}"></iframe>`;
+            zoomHint.style.display = 'none';
+            zoomResetBtn.style.display = 'none';
+        } else {
+            const img = document.createElement('img');
+            img.src = ticket.dataUrl;
+            img.id = 'zoomableImage';
+            stage.appendChild(img);
+            zoomHint.style.display = 'block';
+            zoomResetBtn.style.display = 'inline-flex';
+            attachPinchZoom(stage, img);
+        }
+
+        document.getElementById('viewerOverlay').classList.add('open');
+    }
+
+    function attachPinchZoom(container, img) {
+        container.ontouchstart = (e) => {
+            if (e.touches.length === 2) {
+                initialPinchDist = Math.hypot(
+                    e.touches[0].pageX - e.touches[1].pageX,
+                    e.touches[0].pageY - e.touches[1].pageY
+                );
+                startScale = currentScale;
+            }
+        };
+
+        container.ontouchmove = (e) => {
+            if (e.touches.length === 2 && initialPinchDist > 0) {
+                e.preventDefault();
+                const dist = Math.hypot(
+                    e.touches[0].pageX - e.touches[1].pageX,
+                    e.touches[0].pageY - e.touches[1].pageY
+                );
+                currentScale = Math.min(Math.max(1, startScale * (dist / initialPinchDist)), 5);
+                img.style.transform = `scale(${currentScale})`;
+            }
+        };
+
+        container.ontouchend = () => {
+            initialPinchDist = 0;
+        };
+
+        // Double tap to toggle zoom
+        let lastTap = 0;
+        img.onclick = () => {
+            const now = Date.now();
+            if (now - lastTap < 300) {
+                currentScale = currentScale > 1 ? 1 : 2.5;
+                img.style.transform = `scale(${currentScale})`;
+            }
+            lastTap = now;
+        };
+    }
+
+    function resetZoom() {
+        currentScale = 1;
+        const img = document.getElementById('zoomableImage');
+        if (img) img.style.transform = 'scale(1)';
+    }
+
+    function closeViewer() {
+        document.getElementById('viewerOverlay').classList.remove('open');
+        document.getElementById('viewerStage').innerHTML = '';
+    }
+
+    function downloadCurrentViewerFile() {
+        if (!currentViewerData) return;
+        const a = document.createElement('a');
+        a.href = currentViewerData.dataUrl;
+        a.download = currentViewerData.fileName || 'ticket';
+        a.click();
+    }
+
+    // Point 4: Send Specific Event + Tickets to Friend via Email / Share
+    async function shareEventToFriend(eventId) {
+        const ev = events.find(e => e.id === eventId);
+        if (!ev) return;
+
+        const payload = {
+            app: 'TicketWallet_v8',
+            type: 'single_event_share',
+            exportedAt: new Date().toISOString(),
+            event: ev
+        };
+
+        const jsonStr = JSON.stringify(payload, null, 2);
+        const safeName = ev.title.replace(/[^a-zA-Z0-9א-ת_-]/g, '_');
+        const fileName = `Event_${safeName}.json`;
+        const file = new File([jsonStr], fileName, { type: 'application/json' });
+
+        // Try native Web Share API with file attachment (works on Android/iOS Gmail, WhatsApp, etc.)
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+                await navigator.share({
+                    title: `כרטיסים לאירוע: ${ev.title}`,
+                    text: `היי! מצורף קובץ האירוע "${ev.title}" (${formatDate(ev.date)}) כולל הכרטיסים. פתח את אפליקציית ארנק הכרטיסים -> גיבוי ושחזור -> טעינת אירוע שהתקבל במייל.`,
+                    files: [file]
+                });
+                showToast('האירוע שותף בהצלחה!');
+                return;
+            } catch (err) {
+                if (err.name === 'AbortError') return;
+            }
+        }
+
+        // Fallback: Download file & open mailto draft
+        const url = URL.createObjectURL(file);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.click();
+
+        const subject = encodeURIComponent(`כרטיסים לאירוע: ${ev.title}`);
+        const body = encodeURIComponent(
+            `היי,
+מצורף קובץ האירוע "${ev.title}" בתאריך ${formatDate(ev.date)} כולל הכרטיסים (${fileName}).
+` +
+            `כדי לטעון אותו אצלך: היכנס לארנק הכרטיסים -> כפתור ענן למעלה -> טעינת אירוע שהתקבל במייל.
+
+(אל תשכח לצרף את הקובץ ${fileName} שהורד כעת למייל זה)`
+        );
+        setTimeout(() => {
+            window.location.href = `mailto:?subject=${subject}&body=${body}`;
+        }, 600);
+        showToast('קובץ האירוע הורד - צרף אותו למייל שנפתח');
+    }
+
+    // Point 5: Import Single Event Received via Email
+    function importSingleEvent(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            try {
+                const parsed = JSON.parse(evt.target.result);
+                const incomingEv = parsed.event ? parsed.event : parsed;
+                if (!incomingEv.title || !incomingEv.date) {
+                    throw new Error('Invalid format');
+                }
+                // Assign new unique ID to avoid collision
+                incomingEv.id = 'ev_' + Date.now();
+                events.push(incomingEv);
+                persistEvents();
+                renderEvents();
+                closeModal('dataModal');
+                showToast(`האירוע "${incomingEv.title}" נטען בהצלחה!`);
+            } catch (err) {
+                alert('שגיאה בטעינת הקובץ: ודא שבחרת קובץ אירוע תקין (.json) שנשלח מהאפליקציה.');
+            }
+        };
+        reader.readAsText(file);
+        e.target.value = '';
+    }
+
+    // Point 7: Local ZIP Backup
+    async function exportFullZipBackup() {
+        if (events.length === 0) {
+            alert('אין אירועים לגיבוי כרגע.');
+            return;
+        }
+        showToast('מכין קובץ ZIP לגיבוי...');
+        const zip = new JSZip();
+
+        // Save master JSON database inside ZIP
+        const backupData = {
+            app: 'TicketWallet_v8',
+            type: 'full_backup',
+            exportedAt: new Date().toISOString(),
+            events: events
+        };
+        zip.file('backup_data.json', JSON.stringify(backupData, null, 2));
+
+        // Also organize human-readable folders with actual ticket files inside the ZIP
+        events.forEach(ev => {
+            const folderName = `${ev.date}_${ev.title.replace(/[^a-zA-Z0-9א-ת _-]/g, '')}`;
+            const folder = zip.folder(folderName);
+            (ev.tickets || []).forEach(t => {
+                if (t.dataUrl && t.dataUrl.includes(',')) {
+                    const base64Data = t.dataUrl.split(',')[1];
+                    folder.file(t.fileName, base64Data, { base64: true });
+                }
+            });
         });
-    </script>
+
+        const blob = await zip.generateAsync({ type: 'blob' });
+        const today = new Date().toISOString().slice(0, 10);
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `Tickets_Backup_${today}.zip`;
+        a.click();
+        showToast('גיבוי ה-ZIP הורד למכשיר בהצלחה!');
+    }
+
+    // Point 6: Restore Full Backup (ZIP or JSON)
+    async function restoreFullBackup(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        try {
+            let jsonContent = '';
+            if (file.name.endsWith('.zip')) {
+                const zip = await JSZip.loadAsync(file);
+                const dataFile = zip.file('backup_data.json');
+                if (!dataFile) throw new Error('Missing backup_data.json inside ZIP');
+                jsonContent = await dataFile.async('string');
+            } else {
+                jsonContent = await file.text();
+            }
+
+            const parsed = JSON.parse(jsonContent);
+            const restoredEvents = parsed.events || (Array.isArray(parsed) ? parsed : null);
+            if (!restoredEvents) throw new Error('Invalid backup structure');
+
+            if (confirm(`נמצאו ${restoredEvents.length} אירועים בגיבוי. לחץ אישור כדי למזג אותם עם האירועים הקיימים שלך.`)) {
+                const existingIds = new Set(events.map(ev => ev.id));
+                restoredEvents.forEach(ev => {
+                    if (existingIds.has(ev.id)) {
+                        ev.id = 'ev_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+                    }
+                    events.push(ev);
+                });
+                persistEvents();
+                renderEvents();
+                closeModal('dataModal');
+                showToast(`שוחזרו ${restoredEvents.length} אירועים בהצלחה!`);
+            }
+        } catch (err) {
+            console.error(err);
+            alert('שגיאה בשחזור הגיבוי: ודא שבחרת קובץ גיבוי ZIP או JSON תקין.');
+        }
+        e.target.value = '';
+    }
+
+    init();
+</script>
 </body>
 </html>
