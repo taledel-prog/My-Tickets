@@ -3,9 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-    <title>הכרטיסים שלי - גרסה 8.0</title>
-    <!-- JSZip & FileSaver for local ZIP backup & export -->
+    <title>הכרטיסים שלי - גרסה 8.2</title>
+    <!-- JSZip for local ZIP backup & export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- PDF.js for extracting text from PDFs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- Tesseract.js for OCR on images (JPEG/PNG) -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <!-- FontAwesome for clean icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts: Heebo -->
@@ -51,23 +55,23 @@
             transition: background 0.3s ease, color 0.3s ease;
         }
 
-        /* Header */
+        /* Header - Safe padding for mobile notches & status bar */
         header {
             position: sticky;
             top: 0;
             z-index: 100;
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
-            background: rgba(15, 23, 42, 0.65);
+            background: rgba(15, 23, 42, 0.75);
             border-bottom: 1px solid var(--glass-border);
-            padding: 14px 18px;
+            padding: max(16px, env(safe-area-inset-top, 20px)) 18px 14px 18px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
         body.light-mode header {
-            background: rgba(255, 255, 255, 0.75);
+            background: rgba(255, 255, 255, 0.85);
         }
 
         .logo-area {
@@ -569,6 +573,69 @@
             align-items: center;
         }
 
+        .scan-status {
+            font-size: 0.78rem;
+            color: #a5b4fc;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        body.light-mode .scan-status { color: #4f46e5; }
+
+        /* Extracted Suggestion Box */
+        .suggestion-card {
+            background: rgba(99, 102, 241, 0.15);
+            border: 1px solid rgba(99, 102, 241, 0.45);
+            border-radius: 14px;
+            padding: 12px;
+            margin-top: 10px;
+        }
+        body.light-mode .suggestion-card {
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .suggestion-card h4 {
+            font-size: 0.92rem;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .suggestion-fields {
+            font-size: 0.82rem;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-bottom: 10px;
+            color: var(--text-secondary);
+        }
+
+        .suggestion-fields strong {
+            color: var(--text-primary);
+        }
+
+        .raw-text-preview {
+            max-height: 90px;
+            overflow-y: auto;
+            font-size: 0.74rem;
+            background: rgba(0, 0, 0, 0.25);
+            padding: 8px;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            margin-bottom: 10px;
+            color: var(--text-secondary);
+        }
+        body.light-mode .raw-text-preview {
+            background: rgba(255, 255, 255, 0.75);
+        }
+
+        .suggestion-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
         .btn-primary {
             width: 100%;
             padding: 13px;
@@ -746,7 +813,7 @@
     <div class="logo-area">
         <i class="fa-solid fa-ticket"></i>
         <h1>ארנק כרטיסים</h1>
-        <span class="version-badge">v8.0</span>
+        <span class="version-badge">v8.2</span>
     </div>
     <div class="header-actions">
         <button class="icon-btn" onclick="openDataModal()" title="גיבוי, שחזור וייבוא">
@@ -827,7 +894,7 @@
                 </div>
             </div>
 
-            <!-- Point 3: Custom Background Color Picker -->
+            <!-- Custom Background Color Picker -->
             <div class="form-group">
                 <label>צבע רקע לכרטיס האירוע</label>
                 <div class="color-palette" id="colorPalette">
@@ -856,7 +923,7 @@
 
             <!-- Add New Tickets -->
             <div class="form-group">
-                <label>הוספת כרטיסים (תמונה או PDF)</label>
+                <label>הוספת כרטיסים (חילוץ טקסט מ-PDF או JPEG)</label>
                 <div id="newTicketsContainer"></div>
                 <button type="button" class="btn-sm secondary" onclick="addTicketRow()" style="margin-top:6px;">
                     <i class="fa-solid fa-plus"></i> הוסף שורת כרטיס
@@ -876,7 +943,6 @@
             <button class="close-modal" onclick="closeModal('dataModal')">&times;</button>
         </div>
         <div class="menu-grid">
-            <!-- Point 5: Load event sent via email -->
             <button class="menu-card" onclick="document.getElementById('importSingleInput').click()">
                 <i class="fa-solid fa-envelope-open-text"></i>
                 <div class="menu-card-text">
@@ -886,7 +952,6 @@
             </button>
             <input type="file" id="importSingleInput" accept=".json" style="display:none" onchange="importSingleEvent(event)">
 
-            <!-- Point 7: Local ZIP Backup -->
             <button class="menu-card" onclick="exportFullZipBackup()">
                 <i class="fa-solid fa-file-zipper"></i>
                 <div class="menu-card-text">
@@ -895,7 +960,6 @@
                 </div>
             </button>
 
-            <!-- Point 6: Load Full Backup -->
             <button class="menu-card" onclick="document.getElementById('restoreBackupInput').click()">
                 <i class="fa-solid fa-rotate-left"></i>
                 <div class="menu-card-text">
@@ -908,7 +972,7 @@
     </div>
 </div>
 
-<!-- Point 1: Pinch-Zoom Fullscreen Viewer -->
+<!-- Pinch-Zoom Fullscreen Viewer -->
 <div class="viewer-overlay" id="viewerOverlay">
     <div class="viewer-toolbar">
         <div class="viewer-title" id="viewerTitle">תצוגת כרטיס</div>
@@ -931,12 +995,15 @@
 <div class="toast" id="toast"></div>
 
 <script>
+    if (window.pdfjsLib) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+
     const STORAGE_KEY = 'ticket_wallet_v8_data';
     let events = [];
     let currentCategory = 'הכל';
     let currentViewerData = null;
 
-    // Initialize App
     function init() {
         const savedTheme = localStorage.getItem('ticket_wallet_theme');
         if (savedTheme === 'light') {
@@ -984,7 +1051,6 @@
         renderEvents();
     }
 
-    // Countdown Helper
     function getCountdownBadge(dateStr, timeStr) {
         if (!dateStr) return '';
         const target = new Date(`${dateStr}T${timeStr || '23:59'}`);
@@ -1124,14 +1190,12 @@
         window.open(`https://waze.com/ul?q=${encodeURIComponent(loc)}&navigate=yes`, '_blank');
     }
 
-    // Color Selection
     function selectColor(color, el) {
         document.getElementById('evColor').value = color;
         document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
         if (el) el.classList.add('selected');
     }
 
-    // Modal Open / Close
     function openEventModal() {
         document.getElementById('eventModalTitle').textContent = 'אירוע חדש';
         document.getElementById('editEventId').value = '';
@@ -1144,7 +1208,6 @@
         document.getElementById('eventModal').classList.add('open');
     }
 
-    // Point 2: Edit Existing Event
     let tempExistingTickets = [];
     function openEditEventModal(id) {
         const ev = events.find(e => e.id === id);
@@ -1197,6 +1260,101 @@
         renderExistingTicketsInForm();
     }
 
+    // Extract text from PDF or Image (JPEG/PNG)
+    async function extractTextFromFile(file, statusEl) {
+        if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+            if (!window.pdfjsLib) throw new Error('PDF.js not loaded');
+            statusEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> קורא טקסט מתוך קובץ PDF...';
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            let fullText = '';
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const content = await page.getTextContent();
+                const strings = content.items.map(item => item.str);
+                fullText += strings.join(' ') + '\n';
+            }
+            return fullText.trim();
+        } else if (file.type.startsWith('image/') || /\.(jpe?g|png|webp)$/i.test(file.name)) {
+            if (!window.Tesseract) throw new Error('Tesseract not loaded');
+            statusEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> סורק טקסט מתוך התמונה (OCR)...';
+            const worker = await Tesseract.createWorker('heb+eng', 1, {
+                logger: m => {
+                    if (m.status === 'recognizing text' && typeof m.progress === 'number') {
+                        statusEl.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> מזהה טקסט בתמונה (${Math.round(m.progress * 100)}%)...`;
+                    }
+                }
+            });
+            const { data } = await worker.recognize(file);
+            await worker.terminate();
+            return (data.text || '').trim();
+        }
+        return '';
+    }
+
+    // Parse common fields from extracted file content
+    function parseTicketFieldsFromText(text) {
+        const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+        let date = '';
+        let time = '';
+        let title = '';
+        let location = '';
+        let holder = '';
+        let notes = '';
+
+        // Date: DD/MM/YYYY or DD.MM.YYYY or YYYY-MM-DD
+        const dmyMatch = text.match(/\b(\d{1,2})[./-](\d{1,2})[./-](\d{4})\b/);
+        const ymdMatch = text.match(/\b(\d{4})-(\d{2})-(\d{2})\b/);
+        if (ymdMatch) {
+            date = `${ymdMatch[1]}-${ymdMatch[2]}-${ymdMatch[3]}`;
+        } else if (dmyMatch) {
+            const day = dmyMatch[1].padStart(2, '0');
+            const month = dmyMatch[2].padStart(2, '0');
+            const year = dmyMatch[3];
+            date = `${year}-${month}-${day}`;
+        }
+
+        // Time: HH:MM
+        const timeMatch = text.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);
+        if (timeMatch) {
+            time = `${timeMatch[1].padStart(2, '0')}:${timeMatch[2]}`;
+        }
+
+        // Holder / Participant name
+        for (const line of lines) {
+            const nameMatch = line.match(/(?:שם\s*(?:המשתתף|הלקוח|בעל הכרטיס|מזמין)?|לקוח|אורח|holder|name)\s*[:\-–]?\s*([א-תa-zA-Z\s]{2,35})/i);
+            if (nameMatch) {
+                holder = nameMatch[1].trim();
+                break;
+            }
+        }
+
+        // Location / Venue
+        for (const line of lines) {
+            const locMatch = line.match(/(?:מיקום|מקום|אולם|מיקום האירוע|כתובת|venue|location)\s*[:\-–]?\s*([^\n]{2,45})/i);
+            if (locMatch) {
+                location = locMatch[1].trim();
+                break;
+            }
+        }
+
+        // Seating / Row / Gate notes
+        const seatLines = lines.filter(l => /(?:שורה|כיסא|מושב|שער|יציע|row|seat|gate)/i.test(l));
+        if (seatLines.length > 0) {
+            notes = seatLines.slice(0, 2).join(' | ').slice(0, 100);
+        }
+
+        // Event Title candidate: first meaningful line that isn't just a date/time/boilerplate
+        for (const line of lines) {
+            if (line.length >= 3 && line.length <= 60 && !/^(כרטיס|ticket|הזמנה|order|תאריך|date|שעה|time|מיקום|מקום)/i.test(line)) {
+                title = line;
+                break;
+            }
+        }
+
+        return { title, date, time, location, holder, notes };
+    }
+
     function addTicketRow() {
         const container = document.getElementById('newTicketsContainer');
         const row = document.createElement('div');
@@ -1209,8 +1367,86 @@
                 </button>
             </div>
             <input type="file" class="form-control ticket-file-input" accept="image/*,application/pdf">
+            <div class="scan-status" style="display:none;"></div>
+            <div class="suggestion-area"></div>
         `;
+
+        const fileInput = row.querySelector('.ticket-file-input');
+        const holderInput = row.querySelector('.ticket-holder-input');
+        const statusEl = row.querySelector('.scan-status');
+        const suggestionArea = row.querySelector('.suggestion-area');
+
+        fileInput.addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            suggestionArea.innerHTML = '';
+            if (!file) return;
+
+            statusEl.style.display = 'flex';
+            try {
+                const extractedText = await extractTextFromFile(file, statusEl);
+                statusEl.style.display = 'none';
+
+                if (!extractedText) {
+                    statusEl.style.display = 'flex';
+                    statusEl.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> לא זוהה טקסט בקובץ — ניתן למלא ידנית';
+                    return;
+                }
+
+                const parsed = parseTicketFieldsFromText(extractedText);
+                const encodedData = encodeURIComponent(JSON.stringify(parsed));
+
+                suggestionArea.innerHTML = `
+                    <div class="suggestion-card">
+                        <h4><i class="fa-solid fa-wand-magic-sparkles"></i> נתונים שזוהו מתוך הקובץ</h4>
+                        <div class="suggestion-fields">
+                            <div><strong>שם אירוע:</strong> ${escapeHtml(parsed.title || 'לא זוהה')}</div>
+                            <div><strong>תאריך:</strong> ${escapeHtml(parsed.date ? formatDate(parsed.date) : 'לא זוהה')}</div>
+                            <div><strong>שעה:</strong> ${escapeHtml(parsed.time || 'לא זוהתה')}</div>
+                            <div><strong>מיקום:</strong> ${escapeHtml(parsed.location || 'לא זוהה')}</div>
+                            <div><strong>משתתף:</strong> ${escapeHtml(parsed.holder || 'לא זוהה')}</div>
+                            ${parsed.notes ? `<div><strong>פרטי כרטיס:</strong> ${escapeHtml(parsed.notes)}</div>` : ''}
+                        </div>
+                        <div class="raw-text-preview">${escapeHtml(extractedText.slice(0, 500))}</div>
+                        <div class="suggestion-actions">
+                            <button type="button" class="btn-sm" onclick="applyExtractedSuggestion(this, '${encodedData}')">
+                                <i class="fa-solid fa-check"></i> הכנס נתונים מהקובץ
+                            </button>
+                            <button type="button" class="btn-sm secondary" onclick="dismissSuggestion(this)">
+                                <i class="fa-solid fa-pen"></i> הכנסה ידנית
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } catch (err) {
+                console.error(err);
+                statusEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> חילוץ הטקסט נכשל — ניתן למלא את השדות ידנית';
+            }
+        });
+
         container.appendChild(row);
+    }
+
+    function applyExtractedSuggestion(btn, encodedData) {
+        const parsed = JSON.parse(decodeURIComponent(encodedData));
+        const row = btn.closest('.ticket-upload-row');
+        const holderInput = row.querySelector('.ticket-holder-input');
+
+        if (parsed.title) document.getElementById('evTitle').value = parsed.title;
+        if (parsed.date) document.getElementById('evDate').value = parsed.date;
+        if (parsed.time) document.getElementById('evTime').value = parsed.time;
+        if (parsed.location) document.getElementById('evLocation').value = parsed.location;
+        if (parsed.notes && !document.getElementById('evNotes').value) {
+            document.getElementById('evNotes').value = parsed.notes;
+        }
+        if (parsed.holder) holderInput.value = parsed.holder;
+
+        btn.closest('.suggestion-area').innerHTML = '';
+        showToast('הנתונים מהקובץ הוכנסו לטופס!');
+    }
+
+    function dismissSuggestion(btn) {
+        btn.closest('.suggestion-area').innerHTML = '';
+        showToast('נבחרה הכנסה ידנית');
     }
 
     function readFileAsBase64(file) {
@@ -1296,7 +1532,6 @@
         document.getElementById('dataModal').classList.add('open');
     }
 
-    // Point 1: Pinch-Zoom Image & PDF Viewer
     let currentScale = 1;
     let initialPinchDist = 0;
     let startScale = 1;
@@ -1315,7 +1550,6 @@
         currentScale = 1;
 
         if (ticket.mimeType && ticket.mimeType.includes('pdf')) {
-            // Convert base64 to Blob URL for reliable mobile PDF rendering
             const byteChars = atob(ticket.dataUrl.split(',')[1]);
             const byteNumbers = new Array(byteChars.length);
             for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
@@ -1365,7 +1599,6 @@
             initialPinchDist = 0;
         };
 
-        // Double tap to toggle zoom
         let lastTap = 0;
         img.onclick = () => {
             const now = Date.now();
@@ -1396,7 +1629,6 @@
         a.click();
     }
 
-    // Point 4: Send Specific Event + Tickets to Friend via Email / Share
     async function shareEventToFriend(eventId) {
         const ev = events.find(e => e.id === eventId);
         if (!ev) return;
@@ -1413,7 +1645,6 @@
         const fileName = `Event_${safeName}.json`;
         const file = new File([jsonStr], fileName, { type: 'application/json' });
 
-        // Try native Web Share API with file attachment (works on Android/iOS Gmail, WhatsApp, etc.)
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
             try {
                 await navigator.share({
@@ -1428,7 +1659,6 @@
             }
         }
 
-        // Fallback: Download file & open mailto draft
         const url = URL.createObjectURL(file);
         const a = document.createElement('a');
         a.href = url;
@@ -1437,12 +1667,8 @@
 
         const subject = encodeURIComponent(`כרטיסים לאירוע: ${ev.title}`);
         const body = encodeURIComponent(
-            `היי,
-מצורף קובץ האירוע "${ev.title}" בתאריך ${formatDate(ev.date)} כולל הכרטיסים (${fileName}).
-` +
-            `כדי לטעון אותו אצלך: היכנס לארנק הכרטיסים -> כפתור ענן למעלה -> טעינת אירוע שהתקבל במייל.
-
-(אל תשכח לצרף את הקובץ ${fileName} שהורד כעת למייל זה)`
+            `היי,\nמצורף קובץ האירוע "${ev.title}" בתאריך ${formatDate(ev.date)} כולל הכרטיסים (${fileName}).\n` +
+            `כדי לטעון אותו אצלך: היכנס לארנק הכרטיסים -> כפתור ענן למעלה -> טעינת אירוע שהתקבל במייל.\n\n(אל תשכח לצרף את הקובץ ${fileName} שהורד כעת למייל זה)`
         );
         setTimeout(() => {
             window.location.href = `mailto:?subject=${subject}&body=${body}`;
@@ -1450,7 +1676,6 @@
         showToast('קובץ האירוע הורד - צרף אותו למייל שנפתח');
     }
 
-    // Point 5: Import Single Event Received via Email
     function importSingleEvent(e) {
         const file = e.target.files[0];
         if (!file) return;
@@ -1463,7 +1688,6 @@
                 if (!incomingEv.title || !incomingEv.date) {
                     throw new Error('Invalid format');
                 }
-                // Assign new unique ID to avoid collision
                 incomingEv.id = 'ev_' + Date.now();
                 events.push(incomingEv);
                 persistEvents();
@@ -1478,7 +1702,6 @@
         e.target.value = '';
     }
 
-    // Point 7: Local ZIP Backup
     async function exportFullZipBackup() {
         if (events.length === 0) {
             alert('אין אירועים לגיבוי כרגע.');
@@ -1487,7 +1710,6 @@
         showToast('מכין קובץ ZIP לגיבוי...');
         const zip = new JSZip();
 
-        // Save master JSON database inside ZIP
         const backupData = {
             app: 'TicketWallet_v8',
             type: 'full_backup',
@@ -1496,7 +1718,6 @@
         };
         zip.file('backup_data.json', JSON.stringify(backupData, null, 2));
 
-        // Also organize human-readable folders with actual ticket files inside the ZIP
         events.forEach(ev => {
             const folderName = `${ev.date}_${ev.title.replace(/[^a-zA-Z0-9א-ת _-]/g, '')}`;
             const folder = zip.folder(folderName);
@@ -1517,7 +1738,6 @@
         showToast('גיבוי ה-ZIP הורד למכשיר בהצלחה!');
     }
 
-    // Point 6: Restore Full Backup (ZIP or JSON)
     async function restoreFullBackup(e) {
         const file = e.target.files[0];
         if (!file) return;
